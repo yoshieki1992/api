@@ -1,0 +1,56 @@
+version: 0.0
+os: linux 
+files:
+  - source: /
+    destination: /var/www/
+    overwrite: true
+  # - source:
+  #   destination:
+permissions:
+  - object: /
+    pattern: '*.sh'
+    # except:
+    owner: ec2-user
+    # group:
+    mode: 755
+    # acls:
+    #   -
+    # context:
+    #   user:
+    #   type:
+    #   range:
+    type:
+      - file
+
+hooks:
+  BeforeInstall:
+    - location: clean-stop.sh
+      timeout: 600
+      runas: root
+  #   - location: 
+  #     timeout:
+  #     runas:
+
+  #AfterInstall:
+  #  - location: clean-stop.sh   
+   #   timeout: 600
+    #  runas: ec2-user
+    # - location: 
+    #   timeout:
+    #   runas:
+
+  ApplicationStart:
+    - location: node-start.sh
+      timeout: 900
+      runas: root
+    # - location: 
+    #   timeout:
+    #   runas:
+
+  # ValidateService:
+  #   - location:     
+  #     timeout: 
+  #     runas:
+  #   - location: 
+  #     timeout:
+  #     runas:

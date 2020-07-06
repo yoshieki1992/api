@@ -1,0 +1,37 @@
+# Balanceador clasico 
+apiVersion: v1
+kind: Service
+metadata:
+  name: apiservice
+  namespace: api
+  annotations:
+
+    # Deshabilitado por default 
+    # service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true" 
+       
+    # ARn del Certificado 
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: ARn
+    
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
+    
+    # Necesario para escalamiento horizonal de nodos Workers dede kubernetes
+    #service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    
+    # Tiempo minimo de cierre de conexiones 
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "60"
+
+    # Tiempo minimo de una conexion sin trafico
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+
+    # Valores permitidos sctp, udp, tcp
+    #service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+spec:
+  type: LoadBalancer
+  selector:
+    app: api-app
+  ports:
+    - protocol: HTTP
+      port: 80
+      targetPort: 8080
+
+

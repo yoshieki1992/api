@@ -1,0 +1,49 @@
+# Flujo de trafico : ingress controller > nodeport > deployment > pods
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: "api-ingress"
+  namespace: "api"
+  annotations:
+
+    # TIpo de balanceador disponibles : nlb, clasicc, alb
+    kubernetes.io/ingress.class: alb
+
+    # 
+    alb.ingress.kubernetes.io/healthcheck-path: "/docs"
+    alb.ingress.kubernetes.io/success-codes: 200-308
+    
+    # Regla de redireccion por hostname
+    alb.ingress.kubernetes.io/actions.redirect-to-docs: >
+      {"Type":"redirect","RedirectConfig":{"Host":"#{host}","Path":"/docs","Port":"443","Protocol":"HTTPS","Query":"#{query}","StatusCode":"HTTP_302"}}
+    
+    # Valores permitidos : internal-private / internet facing
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    
+    # Algoritmos de balanceo permitidos : least_outstanding_requests y rond robin (default)
+    alb.ingress.kubernetes.io/target-group-attributes: load_balancing.algorithm.type=least_outstanding_requests
+
+    # Puertos escucha HTTPS y HTTP
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+
+    # Modificar el ARn generado por ACM
+    #alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:124051652702:certificate/5ed1dd8c-eea0-4efd-bc29-4ac5a24cc7d2
+ 
+  labels:
+    app: api-ingress
+spec:
+  rules:
+  # Las reglas se aplicaran de forma descendente
+    - http:
+        paths:
+          - path: /
+            backend:
+              serviceName: "redirect-to-docs"
+              servicePort: use-annotation
+    - https:
+        paths:
+          - path: /*
+            backend:
+              serviceName: api-service
+              servicePort: 80
+    

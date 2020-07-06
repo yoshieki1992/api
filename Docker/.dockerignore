@@ -1,0 +1,4 @@
+# Obviamos archivos generado por swagger
+*/.swagger-codegen*
+*/.git
+*/README.md

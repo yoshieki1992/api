@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Despliegue de instancia EC2  
+Metadata:
+  Authors:
+    Description: Yoshieki Tanamachi yoshieki1992@gmail.com
+  License: gg
+  
+Resources:
+    PipelineRol:
+        Type: 'AWS::IAM::Role'
+        Description: "Pipeline NodeJS"
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service:
+                    - codepipeline.amazonaws.com
+                Action: 'sts:AssumeRole'
+          RoleName: pipe-rol-api
+    
+    PipelinePolicy:
+        Type: 'AWS::IAM::Policy'
+        Description: "En uso de pipeline-rol-api"
+        Properties:
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codedeploy:CreateDeployment
+                  - codedeploy:GetApplication
+                  - codedeploy:GetApplicationRevision
+                  - codedeploy:GetDeployment
+                  - codedeploy:GetDeploymentConfig
+                  - codedeploy:RegisterApplicationRevision
+                Resource: '*'
+              
+              - Effect: Allow
+                Action:
+                  - codecommit:CancelUploadArchive
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:UploadArchive
+                Resource: '*'
+
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: '*'
+
+              - Effect: Allow
+                Action:
+                  - 'ec2:*'
+                  - 's3:*'
+                  - cloudwatch:*
+                Resource: '*'
+              
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: '*'
+                Condition: 
+                  StringEqualsIfExists:
+                    'iam:PassedToService': ec2.amazonaws.com
+
+          PolicyName: pipe-policy-api
+          Roles:
+            - !Ref PipelineRol
+
+    CodebuildRol:
+        Type: 'AWS::IAM::Role'
+        Description: "Eventual uso pipeline NodeJS"
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service:
+                    - codebuild.amazonaws.com
+                Action: 'sts:AssumeRole'
+          RoleName: cb-rol-api
+
+    CodebuildPolicy:
+        Type: 'AWS::IAM::Policy'
+        Description: "En uso de cb-rol-api"
+        Properties:
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'codecommit:GitPull'
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                  - 's3:GetBucketAcl'
+                  - 's3:GetBucketLocation'
+                Resource: '*'
+          PolicyName: cb-policy-api
+          Roles:
+            - !Ref CodebuildRol
+
+    Ec2InstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+        Roles: 
+          - !Ref Ec2Rol
+
+    Ec2Rol:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - ec2.amazonaws.com
+              Action: 'sts:AssumeRole'
+        RoleName: ec2-rol-api
+
+    Ec2Policy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:PutObject'
+                - 's3:GetObject'
+                - 's3:ListBucket'
+                - 's3:GetBucketPolicy'
+                - 'kms:Decrypt'
+                - 'sts:AssumeRole'
+              Resource: '*'
+        PolicyName: ec2-policy-api
+        Roles:
+          - !Ref Ec2Rol 
+
+    CodeployRol:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - codedeploy.amazonaws.com
+              Action: 'sts:AssumeRole'
+        RoleName: cd-rol-api
+
+    CodeployPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:*'
+                - 'ec2:*'
+              Resource: '*'
+        PolicyName: cd-policy-api
+        Roles:
+          - !Ref CodeployRol 
+    
+Outputs:
+      PipelineRolOutput:
+        Description: "Referencia Arn para Cross-stack templates"
+        Value: 
+          Fn::GetAtt: PipelineRol.Arn
+        Export: 
+          Name: PipelineRolArn
+
+      CodeBuildRolOutput:
+        Description: "Referencia Arn para Cross-stack templates"
+        Value: 
+          Fn::GetAtt: CodebuildRol.Arn
+        Export: 
+          Name: CodeBuildRolArn
+
+      Ec2RolOutput:
+        Description: "Referencia Arn para Cross-stack templates"
+        Value: 
+          Fn::GetAtt: Ec2Rol.Arn
+        Export: 
+          Name: Ec2RolArn
+
+      CodeployRolOutput:
+        Description: "Referencia Arn para Cross-stack templates"
+        Value: 
+          Fn::GetAtt: CodeployRol.Arn
+        Export: 
+          Name: CodeployRolArn   
+      
+      InstanceProfileOutput:
+        Description: "Referencia Arn para Cross-stack templates"
+        Value: 
+          !Ref Ec2InstanceProfile
+        Export: 
+          Name: Ec2InstanceProfileID
+          

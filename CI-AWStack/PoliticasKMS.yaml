@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Despliegue de instancia EC2  
+Metadata:
+  Authors:
+    Description: Yoshieki Tanamachi yoshieki1992@gmail.com
+  License: gg
+
+Resources:
+    PipelineKMS:
+            Type: 'AWS::KMS::Key'
+            Properties:
+              Description: CMK for codepipeline
+              KeyPolicy:
+                Id: key-pipeline
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS:
+                      - !Join 
+                        - ''
+                        - - 'arn:aws:iam::'
+                          - !Ref "AWS::AccountId"
+                          - ':root'
+                    Action: 'kms:*'
+                    Resource: '*'
+                  - Effect: Allow
+                    Principal:
+                      AWS: !ImportValue PipelineRolArn
+                    Action:
+                      - 'kms:Encrypt'
+                      - 'kms:Decrypt'
+                      - 'kms:ReEncrypt*'
+                      - 'kms:GenerateDataKey*'
+                      - 'kms:DescribeKey'
+                      - 'kms:CreateGrant'
+                      - 'kms:ListGrants'
+                      - 'kms:RevokeGrant'
+                    Resource: '*'
+
+Outputs:
+      KMSOutput:
+        Description: "Referencia KMS Cross-stack templates"
+        Value: 
+          !Ref PipelineKMS 
+        Export: 
+          Name: PipelineKMSID                
+            

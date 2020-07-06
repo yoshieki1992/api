@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Despliegue de instancia EC2  
+Metadata:
+  Authors:
+    Description: Yoshieki Tanamachi yoshieki1992@gmail.com
+  License: gg
+Parameters:
+  
+  NombreServidor:
+    Type: String
+    Default: ec2-cloudappi
+  NombreRepositorio:
+    Type: String
+    Default: cloudappi
+  NombreBranch:
+    Type: String
+    Default: master
+  NombreAplicacion:
+    Type: String
+    Default: nodejs
+  GrupodeDespliegue:
+    Type: String
+    Default: ec2-cloudappi
+ 
+Resources:
+
+    PipelineBucket:
+      Type: 'AWS::S3::Bucket'
+
+    CodeCommit:
+      Type: AWS::CodeCommit::Repository
+      Properties: 
+        RepositoryDescription: 'Repositorio NodeJS'
+        RepositoryName: cloudappi
+      
+    CodeBuild:
+      Type: AWS::CodeBuild::Project
+      Properties:
+        Name: api-node
+        Description: Codebuild NodeJS
+        ServiceRole: !ImportValue CodeBuildRolArn
+        Artifacts: 
+          Type: CODEPIPELINE
+        Environment:
+          Type: LINUX_CONTAINER
+          ComputeType: BUILD_GENERAL1_SMALL
+          Image: aws/codebuild/java:openjdk-8
+          EnvironmentVariables:
+          - Name: varName
+            Value: varValue
+        Source:
+          Type: CODEPIPELINE
+        TimeoutInMinutes: 10
+
+    Codeploy:
+      Type: 'AWS::CodeDeploy::Application'
+      Properties:
+        ApplicationName: !Sub '${NombreAplicacion}'
+        ComputePlatform: Server
+
+    WebServerDeploymentGroup:
+        Type: 'AWS::CodeDeploy::DeploymentGroup'
+        Properties:
+          ApplicationName: !Ref Codeploy
+          AutoRollbackConfiguration: 
+            Enabled: 'false'
+          DeploymentGroupName: !Sub '${GrupodeDespliegue}'
+          DeploymentStyle:
+            DeploymentOption: WITHOUT_TRAFFIC_CONTROL
+            DeploymentType: IN_PLACE
+          Ec2TagSet:
+            Ec2TagSetList:
+              - Ec2TagGroup:
+                  - Key: Name
+                    Value: !Sub '${NombreServidor}'
+                    Type: KEY_AND_VALUE
+          ServiceRoleArn: !ImportValue CodeployRolArn
+    
+    Pipeline:
+        Type: 'AWS::CodePipeline::Pipeline'
+        Properties:
+          RoleArn: !ImportValue PipelineRolArn
+          Name: !Ref 'AWS::StackName'
+          Stages:
+            - Name: Source
+              Actions:
+                - Name: Codecommit-repo
+                  ActionTypeId:
+                    Category: Source
+                    Owner: AWS
+                    Version: 1
+                    Provider: CodeCommit
+                  Configuration:
+                    RepositoryName: !GetAtt CodeCommit.Name
+                    BranchName: !Sub '${NombreBranch}'
+                  RunOrder: 1
+                  OutputArtifacts:
+                    - Name: FromCodecommit
+            - Name: Codedeploy-ec2
+              Actions:
+                - Name: Deploy
+                  InputArtifacts:
+                    - Name: FromCodecommit
+                  ActionTypeId:
+                    Category: Deploy
+                    Owner: AWS
+                    Version: 1
+                    Provider: CodeDeploy
+                  Configuration:
+                    ApplicationName: !Ref Codeploy 
+                    DeploymentGroupName: !Ref WebServerDeploymentGroup
+                  RunOrder: 1
+          ArtifactStore:
+            Type: S3
+            Location: !Ref PipelineBucket
+            EncryptionKey:
+              Id: !ImportValue PipelineKMSID
+              Type: KMS
+            
+    
+
+    
+
+   
+
+

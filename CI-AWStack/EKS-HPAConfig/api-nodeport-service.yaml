@@ -1,0 +1,16 @@
+
+# Flujo de trafico : ingress controller > nodeport > deployment > pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: "api-service"
+  namespace: "api"
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+  selector:
+    # Tags del deployment de la aplicacion
+    app: "api-app"

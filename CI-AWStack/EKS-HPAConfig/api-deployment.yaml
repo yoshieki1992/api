@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deploy
+  namespace: api
+  labels:
+    app: api-app
+spec:
+# HPA sobreescibira el valor de replicas
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-app
+  template:
+    metadata:
+      labels:
+        app: api-app
+    spec:
+      containers:
+      - name: apicloud
+        # Por default EKS tiene acceso nativo a ECR
+        image: 124051652702.dkr.ecr.us-east-1.amazonaws.com/appi:apicloud
+        ports:
+        # Puerto definido en el dockerfile
+        - containerPort: 8080
+        # Es necesario definir metricas para HPA
+        resources:
+            limits:
+              cpu: "300m"
+              memory: "128Mi"
+            requests:
+              cpu: "200m"  
+              memory: "64Mi"
